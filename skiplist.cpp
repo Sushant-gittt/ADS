@@ -1,215 +1,138 @@
-#include <iostream>
-#include <cstdlib>
-#include <cmath>
-#include <cstring>
-#define MAX_LEVEL 6
-const float P = 0.5;
+#include <bits/stdc++.h>
+#define inf 1e9
 using namespace std;
 
-struct snode
-{
-    int value;
-    snode **forw;
-    snode(int level, int &value)
-    {
-        forw = new snode * [level + 1];
-        memset(forw, 0, sizeof(snode*) * (level + 1));
-        this->value = value; 
-    }
-    ~snode()
-    {
-        delete [] forw;        
-    } 
+struct Node {
+  int key;
+  Node *prev, *next, *above, *below;
+
+  Node() : key(-inf), prev(NULL), next(new Node(inf)), above(NULL), below(NULL) {}
+  Node(int key) : key(key), prev(NULL), next(NULL), above(NULL), below(NULL) {}
 };
 
-struct skiplist
-{
-    snode *header;
-    int value;
-    int level;
-    skiplist() 
-    {
-        header = new snode(MAX_LEVEL, value);
-        level = 0;
+class SkipList {
+  Node* head;
+  int height;
+
+  int getRandomLevel(int height) {
+    return rand() % height + 1;
+  }
+
+ public:
+  SkipList(int height) : height(height) {
+    head = new Node();
+    Node* curr = head;
+    for (int i = 0; i < height; ++i) {
+      curr->below = new Node();
+      curr->next->below = curr->below->next, curr->next->prev = curr;
+      curr->below->above = curr;
+      curr = curr->below;
+      curr->next->above = curr->above->next;
     }
-    ~skiplist() 
-    {
-        delete header;
+  }
+
+  Node* search(int key) {
+    Node* curr = head;
+    while (curr->below) {
+      curr = curr->below;
+      while (curr->next && curr->next->key <= key)
+        curr = curr->next;
     }
-    void display();
-    bool contains(int &);
-    void insert_element(int &);
-    void delete_element(int &);        
+    return curr;
+  }
+
+  void insert(int key) {
+    Node *prev = search(key), *node = new Node(key), *below = NULL;
+    int level = getRandomLevel(height);
+    while (level--) {
+      node->next = prev->next, node->prev = prev;
+      prev->next->prev = node, prev->next = node;
+      node->above = level ? new Node(key) : NULL, node->below = below;
+      below = node, node = node->above;
+      while (level && !prev->above)
+        prev = prev->prev;
+      prev = prev->above;
+    }
+  }
+
+  bool remove(int key) {
+    Node* node = search(key);
+    if (node->key != key)
+      return false;
+    while (node) {
+      node->prev->next = node->next, node->next->prev = node->prev;
+      Node* toDelete = node;
+      node = node->above;
+      delete toDelete;
+    }
+    return true;
+  }
+
+  void displayList() {
+    Node* level = head;
+    int height = SkipList::height;
+    while (level->below) {
+      level = level->below;
+      Node* curr = level;
+      cout << height-- << ": ";
+      while (curr) {
+        cout << (curr->key == inf ? "inf" : (curr->key == -inf ? "-inf" : to_string(curr->key))) << ' ';
+        curr = curr->next;
+      }
+      cout << '\n';
+    }
+  }
 };
 
-int main() 
-{
-    skiplist ss;
-    int choice, n;
-    while (1)
-    {
-        cout<<endl<<"-----------------------"<<endl;
-        cout<<endl<<"Operations on Skip list"<<endl;
-        cout<<endl<<"-----------------------"<<endl;
-        cout<<"1.Insert Element"<<endl;
-        cout<<"2.Delete Element"<<endl;
-        cout<<"3.Search Element"<<endl;
-        cout<<"4.Display List "<<endl;
-        cout<<"5.Exit "<<endl;
-        cout<<"Enter your choice : ";
-        cin>>choice;
-        switch(choice)
-        {
-        case 1:
-             cout<<"Enter the element to be inserted: ";
-             cin>>n;
-             ss.insert_element(n);
-             if(ss.contains(n))
-                 cout<<"Element Inserted"<<endl;
-             break;
-        case 2:
-             cout<<"Enter the element to be deleted: ";
-             cin>>n;
-             if(!ss.contains(n))
-             {
-                 cout<<"Element not found"<<endl;
-                 break;
-             }
-             ss.delete_element(n);
-             if(!ss.contains(n))
-                 cout<<"Element Deleted"<<endl;
-             break;
-        case 3:
-             cout<<"Enter the element to be searched: ";
-             cin>>n; 
-             if(ss.contains(n))
-                 cout<<"Element "<<n<<" is in the list"<<endl;
-             else
-                 cout<<"Element not found"<<endl;
-        case 4:
-             cout<<"The List is: ";
-             ss.display();
-             break;
-        case 5:
-             exit(1);
-             break;
-        default:
-             cout<<"Wrong Choice"<<endl;
-        }
-    }
-    return 0;
-}
- 
+int main() {
+  srand(time(0));
 
-float frand() 
-{
-    return (float) rand() / RAND_MAX;
-}
- 
+  cout << "Enter height: ";
+  int height; cin >> height;
+  
+  SkipList sl(height);
+  
+  int choice, n;
+  bool run = true;
+  while (run) {
+    cout << "1.Insert Element\n";
+    cout << "2.Delete Element\n";
+    cout << "3.Search Element\n";
+    cout << "4.Display List\n";
+    cout << "5.Exit\n";
+    cout << "Enter your choice: ";
+    cin >> choice;
+    switch(choice) {
+      case 1:
+        cout << "Enter the element to be inserted: ";
+        cin >> n;
+        sl.insert(n);
+        cout << n << " inserted.";
+        break;
+      case 2:
+        cout << "Enter the element to be deleted: ";
+        cin >> n;
+        if (sl.remove(n)) cout << n << " removed.";
+        else cout << n << " not found.";
+        break;
+      case 3:
+        cout << "Enter the element to be searched: ";
+        cin >> n; 
+        if (sl.search(n)->key == n) cout << n << " found.";
+        else cout << n << " not found.";
+        break;
+      case 4:
+        cout << "The List is: ";
+        sl.displayList();
+        break;
+      case 5:
+        run = false;
+        break;
+      default:
+        cout << "Wrong Choice";
+    }
+    cout << '\n';
+  }
 
-int random_level() 
-{
-    static bool first = true;
-    if (first) 
-    {
-        srand((unsigned)time(NULL));
-        first = false;
-    }
-    int lvl = (int)(log(frand()) / log(1.-P));
-    return lvl < MAX_LEVEL ? lvl : MAX_LEVEL;
-}
- 
-
-void skiplist::insert_element(int &value) 
-{
-    snode *x = header;	
-    snode *update[MAX_LEVEL + 1];
-    memset(update, 0, sizeof(snode*) * (MAX_LEVEL + 1));
-    for (int i = level;i >= 0;i--) 
-    {
-        while (x->forw[i] != NULL && x->forw[i]->value < value) 
-        {
-            x = x->forw[i];
-        }
-        update[i] = x; 
-    }
-    x = x->forw[0];
-    if (x == NULL || x->value != value) 
-    {        
-        int lvl = random_level();
-        if (lvl > level) 
-        {
-            for (int i = level + 1;i <= lvl;i++) 
-            {
-                update[i] = header;
-            }
-            level = lvl;
-        }
-        x = new snode(lvl, value);
-        for (int i = 0;i <= lvl;i++) 
-        {
-            x->forw[i] = update[i]->forw[i];
-            update[i]->forw[i] = x;
-        }
-    }
-}
- 
-
-void skiplist::delete_element(int &value) 
-{
-    snode *x = header;	
-    snode *update[MAX_LEVEL + 1];
-    memset (update, 0, sizeof(snode*) * (MAX_LEVEL + 1));
-    for (int i = level;i >= 0;i--) 
-    {
-        while (x->forw[i] != NULL && x->forw[i]->value < value)
-        {
-            x = x->forw[i];
-        }
-        update[i] = x; 
-    }
-    x = x->forw[0];
-    if (x->value == value) 
-    {
-        for (int i = 0;i <= level;i++) 
-        {
-            if (update[i]->forw[i] != x)
-                break;
-            update[i]->forw[i] = x->forw[i];
-        }
-        delete x;
-        while (level > 0 && header->forw[level] == NULL) 
-        {
-            level--;
-        }
-    }
-}
- 
-
-void skiplist::display() 
-{
-    const snode *x = header->forw[0];
-    while (x != NULL) 
-    {
-        cout << x->value;
-        x = x->forw[0];
-        if (x != NULL)
-            cout << " - ";
-    }
-    cout <<endl;
-}
- 
-
-bool skiplist::contains(int &s_value) 
-{
-    snode *x = header;
-    for (int i = level;i >= 0;i--) 
-    {
-        while (x->forw[i] != NULL && x->forw[i]->value < s_value)
-        {
-            x = x->forw[i];
-        }
-    }
-    x = x->forw[0];
-    return x != NULL && x->value == s_value;
+  return 0;
 }
